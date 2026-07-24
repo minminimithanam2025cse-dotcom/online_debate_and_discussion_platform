@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Moderation Dashboard{% endblock %}
+{% block content %}
+<div class="card p-4">
+    <h2 class="fw-bold mb-4">Moderation reports</h2>
+    {% for report in reports %}
+        <div class="border rounded p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <div>
+                    <div class="fw-semibold">Reported by {{ report.reported_by.username }}</div>
+                    <div class="small text-muted">{{ report.created_at|date:'M d, Y H:i' }} — {{ report.status }}</div>
+                </div>
+                <div class="badge bg-warning text-dark">{{ report.status }}</div>
+            </div>
+            <p class="mt-3 mb-2">{{ report.reason }}</p>
+            <form method="post" action="{% url 'resolve_report' report.pk %}" class="row g-2">
+                {% csrf_token %}
+                <div class="col-md-4">
+                    <select name="status" class="form-select">
+                        {% for value,label in report.STATUS_CHOICES %}
+                            <option value="{{ value }}" {% if report.status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <input type="text" name="admin_note" class="form-control" placeholder="Admin note" value="{{ report.admin_note }}">
+                </div>
+                <div class="col-md-2 d-grid">
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+            </form>
+        </div>
+    {% empty %}
+        <p class="mb-0 text-muted">No reports pending review.</p>
+    {% endfor %}
+</div>
+{% endblock %}

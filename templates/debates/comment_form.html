@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Edit Comment{% endblock %}
+{% block content %}
+<div class="card form-card p-4">
+    <h2 class="fw-bold mb-3">Edit Comment</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            {{ form.text }}
+            {% if form.text.errors %}<div class="text-danger small mt-1">{{ form.text.errors|join:' ' }}</div>{% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary">Update Comment</button>
+        <a href="{% url 'topic_detail' comment.topic.pk %}" class="btn btn-outline-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

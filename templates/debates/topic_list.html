@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Debate Topics{% endblock %}
+{% block content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+    <div>
+        <h1 class="fw-bold mb-1">Explore debates</h1>
+        <p class="text-muted mb-0">Browse conversations, vote, and join the discussion.</p>
+    </div>
+    {% if user.is_authenticated %}
+        <a href="{% url 'topic_create' %}" class="btn btn-primary">Create Topic</a>
+    {% else %}
+        <a href="{% url 'login' %}" class="btn btn-outline-primary">Log in to create</a>
+    {% endif %}
+</div>
+
+<div class="card mb-4 p-3">
+    <form method="get" class="row g-2 align-items-center">
+        <div class="col-lg-7">
+            <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Search by title, description, or category">
+        </div>
+        <div class="col-lg-3">
+            <select name="sort" class="form-select">
+                {% for value,label in sort_options %}
+                    <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-lg-2">
+            <button type="submit" class="btn btn-dark w-100">Search</button>
+        </div>
+    </form>
+</div>
+
+<div class="row g-4">
+    {% for topic in page_obj %}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card topic-card h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                    <span class="badge badge-soft rounded-pill px-3 py-2 text-capitalize">{{ topic.category }}</span>
+                    <span class="text-muted small">{{ topic.created_at|date:'M d, Y' }}</span>
+                </div>
+                <h5 class="fw-bold"><a href="{% url 'topic_detail' topic.pk %}" class="text-decoration-none text-dark">{{ topic.title }}</a></h5>
+                <p class="text-muted small mb-3">{{ topic.description|truncatechars:120 }}</p>
+                <div class="d-flex justify-content-between text-muted small">
+                    <span>By {{ topic.created_by.username }}</span>
+                    <span>{{ topic.total_votes }} votes</span>
+                </div>
+                <div class="d-flex justify-content-between text-muted small mt-2">
+                    <span>{{ topic.comment_count }} comments</span>
+                    <span>{{ topic.for_votes }} for / {{ topic.against_votes }} against</span>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <div class="card p-4 text-center">
+                <p class="mb-0 text-muted">No topics match your search yet.</p>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+{% if page_obj.has_other_pages %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?q={{ q }}&sort={{ sort }}&page={{ page_obj.previous_page_number }}">Previous</a></li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% else %}
+                <li class="page-item"><a class="page-link" href="?q={{ q }}&sort={{ sort }}&page={{ num }}">{{ num }}</a></li>
+            {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?q={{ q }}&sort={{ sort }}&page={{ page_obj.next_page_number }}">Next</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

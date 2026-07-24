@@ -1,0 +1,58 @@
+:root {
+    --bg: #f5f7fb;
+    --card: #ffffff;
+    --primary: #0d6efd;
+    --accent: #6610f2;
+    --text: #1f2937;
+    --muted: #6b7280;
+}
+
+body {
+    background: linear-gradient(180deg, #f8fbff 0%, #eef3ff 100%);
+    color: var(--text);
+    min-height: 100vh;
+}
+
+.card {
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+}
+
+.topic-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.topic-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(15, 23, 42, 0.12);
+}
+
+.badge-soft {
+    background: #e9f0ff;
+    color: #1d4ed8;
+}
+
+.form-card {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.vote-pill {
+    min-width: 105px;
+    text-align: center;
+}
+
+.comment-card {
+    border-left: 4px solid #0d6efd;
+}
+
+.footer {
+    margin-top: 48px;
+}
+
+.profile-stat {
+    background: #f8f9ff;
+    border-radius: 16px;
+    padding: 12px;
+}

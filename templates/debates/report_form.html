@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Report{% endblock %}
+{% block content %}
+<div class="card form-card p-4">
+    <h2 class="fw-bold mb-3">Report this {{ item_type }}</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label class="form-label">Reason</label>
+            {{ form.reason }}
+            {% if form.reason.errors %}<div class="text-danger small mt-1">{{ form.reason.errors|join:' ' }}</div>{% endif %}
+        </div>
+        <button type="submit" class="btn btn-danger">Submit report</button>
+        {% if item_type == 'topic' %}
+            <a href="{% url 'topic_detail' item.pk %}" class="btn btn-outline-secondary">Cancel</a>
+        {% else %}
+            <a href="{% url 'topic_detail' item.topic.pk %}" class="btn btn-outline-secondary">Cancel</a>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}

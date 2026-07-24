@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}Page Not Found{% endblock %}
+{% block content %}
+<div class="card form-card p-5 text-center">
+    <h1 class="display-5 fw-bold">404</h1>
+    <p class="lead">The page you requested could not be found.</p>
+    <a href="{% url 'topic_list' %}" class="btn btn-primary">Back to discussions</a>
+</div>
+{% endblock %}

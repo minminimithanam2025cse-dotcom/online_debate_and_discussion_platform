@@ -13,20 +13,35 @@
                 <div class="badge bg-warning text-dark">{{ report.status }}</div>
             </div>
             <p class="mt-3 mb-2">{{ report.reason }}</p>
-            <form method="post" action="{% url 'resolve_report' report.pk %}" class="row g-2">
+            <div class="mb-2 small text-muted">
+                {% if report.topic %}
+                    Topic: <a href="{% url 'topic_detail' report.topic.pk %}">{{ report.topic.title }}</a>
+                {% endif %}
+                {% if report.comment %}
+                    Comment by {{ report.comment.user.username }}
+                {% endif %}
+            </div>
+            <form method="post" action="{% url 'resolve_report' report.pk %}" class="row g-2 align-items-center">
                 {% csrf_token %}
                 <div class="col-md-4">
                     <select name="status" class="form-select">
-                        {% for value,label in report.STATUS_CHOICES %}
-                            <option value="{{ value }}" {% if report.status == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
+                        <option value="pending" {% if report.status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="reviewed" {% if report.status == 'reviewed' %}selected{% endif %}>Resolve</option>
+                        <option value="dismissed" {% if report.status == 'dismissed' %}selected{% endif %}>Dismiss</option>
                     </select>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <input type="text" name="admin_note" class="form-control" placeholder="Admin note" value="{{ report.admin_note }}">
                 </div>
                 <div class="col-md-2 d-grid">
                     <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+                <div class="col-md-2 d-grid">
+                    {% if report.topic and report.topic.created_by %}
+                        <a href="{% url 'toggle_user_suspension' report.topic.created_by.pk %}" class="btn btn-outline-danger">Suspend {{ report.topic.created_by.username }}</a>
+                    {% elif report.comment and report.comment.user %}
+                        <a href="{% url 'toggle_user_suspension' report.comment.user.pk %}" class="btn btn-outline-danger">Suspend {{ report.comment.user.username }}</a>
+                    {% endif %}
                 </div>
             </form>
         </div>

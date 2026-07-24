@@ -31,12 +31,33 @@
     </form>
 </div>
 
+<div class="card p-3 mb-4">
+    <h4 class="fw-bold mb-3">Trending</h4>
+    <div class="row g-3">
+        {% for topic in trending_topics %}
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="border rounded p-3 h-100">
+                    <div class="small text-muted mb-2">{{ topic.activity_score }} activity points</div>
+                    <a href="{% url 'topic_detail' topic.pk %}" class="fw-semibold text-decoration-none text-dark">{{ topic.title }}</a>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12 text-muted">No trending topics in the last 7 days.</div>
+        {% endfor %}
+    </div>
+</div>
+
 <div class="row g-4">
     {% for topic in page_obj %}
         <div class="col-12 col-md-6 col-xl-4">
             <div class="card topic-card h-100 p-3">
                 <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
-                    <span class="badge badge-soft rounded-pill px-3 py-2 text-capitalize">{{ topic.category }}</span>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge badge-soft rounded-pill px-3 py-2 text-capitalize">{{ topic.category }}</span>
+                        {% for tag in topic.tags.all %}
+                            <span class="badge bg-light text-dark rounded-pill px-2">#{{ tag.name }}</span>
+                        {% endfor %}
+                    </div>
                     <span class="text-muted small">{{ topic.created_at|date:'M d, Y' }}</span>
                 </div>
                 <h5 class="fw-bold"><a href="{% url 'topic_detail' topic.pk %}" class="text-decoration-none text-dark">{{ topic.title }}</a></h5>

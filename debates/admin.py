@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Comment, Report, Topic, Vote
+from .models import Comment, Profile, Report, Topic, Vote
 
 
 @admin.register(Topic)
@@ -18,6 +18,11 @@ class CommentAdmin(admin.ModelAdmin):
 @admin.register(Vote)
 class VoteAdmin(admin.ModelAdmin):
     list_display = ('topic', 'user', 'choice', 'created_at')
+
+
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'is_suspended')
 
 
 @admin.register(Report)

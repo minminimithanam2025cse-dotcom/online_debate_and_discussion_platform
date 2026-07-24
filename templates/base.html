@@ -28,6 +28,14 @@
                 </ul>
                 <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
                     {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link position-relative" href="{% url 'notifications_page' %}">
+                                🔔
+                                {% if unread_notifications_count %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ unread_notifications_count }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
                         <li class="nav-item text-white">Hello, {{ user.username }}</li>
                         <li class="nav-item"><a class="btn btn-outline-light btn-sm" href="{% url 'logout' %}">Logout</a></li>
                     {% else %}

@@ -1,52 +1,84 @@
 {% extends 'base.html' %}
-{% block title %}Moderation Dashboard{% endblock %}
+{% block title %}Moderator Dashboard — DebateSphere{% endblock %}
+
 {% block content %}
-<div class="card p-4">
-    <h2 class="fw-bold mb-4">Moderation reports</h2>
-    {% for report in reports %}
-        <div class="border rounded p-3 mb-3">
-            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                <div>
-                    <div class="fw-semibold">Reported by {{ report.reported_by.username }}</div>
-                    <div class="small text-muted">{{ report.created_at|date:'M d, Y H:i' }} — {{ report.status }}</div>
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card p-4 shadow-sm mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-danger fs-4"></i>
+                    <h2 class="fw-bold mb-0">Moderation Desk</h2>
                 </div>
-                <div class="badge bg-warning text-dark">{{ report.status }}</div>
+                <span class="badge bg-danger rounded-pill px-3 py-2">
+                    {{ pending_count }} Pending Review
+                </span>
             </div>
-            <p class="mt-3 mb-2">{{ report.reason }}</p>
-            <div class="mb-2 small text-muted">
-                {% if report.topic %}
-                    Topic: <a href="{% url 'topic_detail' report.topic.pk %}">{{ report.topic.title }}</a>
-                {% endif %}
-                {% if report.comment %}
-                    Comment by {{ report.comment.user.username }}
-                {% endif %}
+
+            <div class="d-flex flex-column gap-3">
+                {% for report in reports %}
+                    <div class="card p-3 border {% if report.status == 'pending' %}border-warning bg-warning bg-opacity-10{% else %}bg-card{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2 flex-wrap">
+                            <div>
+                                <span class="badge {% if report.status == 'pending' %}bg-warning text-dark{% elif report.status == 'reviewed' %}bg-success{% else %}bg-secondary{% endif %} rounded-pill me-2">
+                                    {{ report.status|upper }}
+                                </span>
+                                <span class="fw-bold small">Reported by {{ report.reported_by.username }}</span>
+                                <span class="text-muted small ms-2"><i class="fa-regular fa-clock me-1"></i>{{ report.created_at|date:'M d, Y H:i' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="p-2 rounded bg-body-tertiary mb-3 small">
+                            <strong>Reason:</strong> {{ report.reason }}
+                        </div>
+
+                        <div class="mb-3 small">
+                            {% if report.topic %}
+                                <div><strong>Target Topic:</strong> <a href="{% url 'topic_detail' report.topic.pk %}" class="fw-semibold">{{ report.topic.title }}</a> by <em>{{ report.topic.created_by.username }}</em></div>
+                            {% endif %}
+                            {% if report.comment %}
+                                <div><strong>Target Argument:</strong> "{{ report.comment.text|truncatewords:20 }}" by <em>{{ report.comment.user.username }}</em> on <a href="{% url 'topic_detail' report.comment.topic.pk %}">{{ report.comment.topic.title }}</a></div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Moderation Action Form -->
+                        <form method="post" action="{% url 'resolve_report' report.pk %}" class="row g-2 align-items-center pt-2 border-top">
+                            {% csrf_token %}
+                            <div class="col-md-3">
+                                <select name="status" class="form-select form-select-sm">
+                                    <option value="pending" {% if report.status == 'pending' %}selected{% endif %}>Pending Review</option>
+                                    <option value="reviewed" {% if report.status == 'reviewed' %}selected{% endif %}>Resolved / Actioned</option>
+                                    <option value="dismissed" {% if report.status == 'dismissed' %}selected{% endif %}>Dismiss Report</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <input type="text" name="admin_note" class="form-control form-control-sm" placeholder="Moderation audit note..." value="{{ report.admin_note }}">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary btn-sm w-100">Update Status</button>
+                            </div>
+                            <div class="col-md-2">
+                                {% if report.topic and report.topic.created_by %}
+                                    <a href="{% url 'toggle_user_suspension' report.topic.created_by.pk %}" class="btn btn-outline-danger btn-sm w-100" onclick="return confirm('Toggle suspension?')">
+                                        Suspend User
+                                    </a>
+                                {% elif report.comment and report.comment.user %}
+                                    <a href="{% url 'toggle_user_suspension' report.comment.user.pk %}" class="btn btn-outline-danger btn-sm w-100" onclick="return confirm('Toggle suspension?')">
+                                        Suspend User
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                {% empty %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="fa-solid fa-check-double text-success fs-1 mb-3 d-block"></i>
+                        <h5 class="fw-bold">No reports in queue</h5>
+                        <p class="small mb-0">The debate arena is peaceful and conforming to civil discourse standards!</p>
+                    </div>
+                {% endfor %}
             </div>
-            <form method="post" action="{% url 'resolve_report' report.pk %}" class="row g-2 align-items-center">
-                {% csrf_token %}
-                <div class="col-md-4">
-                    <select name="status" class="form-select">
-                        <option value="pending" {% if report.status == 'pending' %}selected{% endif %}>Pending</option>
-                        <option value="reviewed" {% if report.status == 'reviewed' %}selected{% endif %}>Resolve</option>
-                        <option value="dismissed" {% if report.status == 'dismissed' %}selected{% endif %}>Dismiss</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <input type="text" name="admin_note" class="form-control" placeholder="Admin note" value="{{ report.admin_note }}">
-                </div>
-                <div class="col-md-2 d-grid">
-                    <button type="submit" class="btn btn-primary">Update</button>
-                </div>
-                <div class="col-md-2 d-grid">
-                    {% if report.topic and report.topic.created_by %}
-                        <a href="{% url 'toggle_user_suspension' report.topic.created_by.pk %}" class="btn btn-outline-danger">Suspend {{ report.topic.created_by.username }}</a>
-                    {% elif report.comment and report.comment.user %}
-                        <a href="{% url 'toggle_user_suspension' report.comment.user.pk %}" class="btn btn-outline-danger">Suspend {{ report.comment.user.username }}</a>
-                    {% endif %}
-                </div>
-            </form>
         </div>
-    {% empty %}
-        <p class="mb-0 text-muted">No reports pending review.</p>
-    {% endfor %}
+    </div>
 </div>
 {% endblock %}

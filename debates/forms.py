@@ -41,30 +41,25 @@ class TopicForm(forms.ModelForm):
         return cleaned
 
     def save(self, commit=True):
-        topic = super().save(commit=False)
-        if commit:
-            topic.save()
-            self.save_m2m()
-
+        topic = super().save(commit=commit)
         tag_names = self.cleaned_data.get('tags_input', [])
-        if tag_names:
-            tag_objects = []
-            for name in tag_names:
-                tag, _ = Tag.objects.get_or_create(name=name)
-                tag_objects.append(tag)
-            topic.tags.set(tag_objects)
-
         if commit:
-            topic.save()
+            if tag_names:
+                tag_objects = []
+                for name in tag_names:
+                    tag, _ = Tag.objects.get_or_create(name=name)
+                    tag_objects.append(tag)
+                topic.tags.set(tag_objects)
         return topic
 
 
 class CommentForm(forms.ModelForm):
     class Meta:
         model = Comment
-        fields = ['text']
+        fields = ['text', 'stance']
         widgets = {
-            'text': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Write your comment...'}),
+            'text': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Present your argument or perspective thoughtfully...'}),
+            'stance': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def clean_text(self):

@@ -1,157 +1,439 @@
 {% extends 'base.html' %}
 {% load debate_tags %}
-{% block title %}{{ topic.title }}{% endblock %}
+
+{% block title %}{{ topic.title }} — DebateSphere{% endblock %}
+
 {% block content %}
+<!-- Breadcrumb Navigation -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item"><a href="{% url 'topic_list' %}" class="text-decoration-none">Debates</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'topic_list' %}?category={{ topic.category }}" class="text-decoration-none text-capitalize">{{ topic.category }}</a></li>
+        <li class="breadcrumb-item active text-truncate" style="max-width: 320px;" aria-current="page">{{ topic.title }}</li>
+    </ol>
+</nav>
+
 <div class="row g-4">
+    <!-- Main Debate Column -->
     <div class="col-lg-8">
-        <div class="card p-4 mb-4">
-            <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
-                <div class="d-flex flex-wrap gap-2">
-                    <span class="badge badge-soft rounded-pill px-3 py-2 text-capitalize">{{ topic.category }}</span>
+        <!-- Topic Motion Header Card -->
+        <div class="card p-4 mb-4 shadow-sm">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="badge-category"><i class="fa-solid fa-tag"></i> {{ topic.category }}</span>
+                    {% if topic.status == 'active' %}
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1">
+                            <i class="fa-solid fa-circle-dot me-1"></i> Active Debate
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary rounded-pill px-3 py-1">Concluded</span>
+                    {% endif %}
                     {% for tag in topic.tags.all %}
-                        <span class="badge bg-light text-dark rounded-pill px-2">#{{ tag.name }}</span>
+                        <a href="{% url 'topic_list' %}?tag={{ tag.name }}" class="badge-tag">#{{ tag.name }}</a>
                     {% endfor %}
                 </div>
-                <span class="small text-muted">Created by {{ topic.created_by.username }}</span>
+
+                <div class="d-flex align-items-center gap-2 text-muted small">
+                    <span title="Views"><i class="fa-regular fa-eye me-1"></i>{{ topic.views_count }}</span>
+                    <span>•</span>
+                    <span>{{ topic.created_at|date:'M d, Y' }}</span>
+                </div>
             </div>
-            <h1 class="fw-bold mb-3">{{ topic.title }}</h1>
-            <p class="lead">{{ topic.description }}</p>
-            <div class="d-flex flex-wrap gap-2">
-                <a href="{% url 'report_topic' topic.pk %}" class="btn btn-outline-danger btn-sm">Report topic</a>
-                <a href="{% url 'user_profile' topic.created_by.username %}" class="btn btn-outline-secondary btn-sm">View creator</a>
+
+            <!-- Motion Title -->
+            <h1 class="fw-bold mb-3 fs-3">{{ topic.title }}</h1>
+            <p class="text-secondary lead fs-6 mb-4" style="line-height: 1.7;">{{ topic.description }}</p>
+
+            <!-- Topic Actions & Creator Footer -->
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 pt-3 border-top">
+                <a href="{% url 'user_profile' topic.created_by.username %}" class="d-flex align-items-center gap-2 text-decoration-none text-reset">
+                    {% if topic.created_by.profile.avatar %}
+                        <img src="{{ topic.created_by.profile.avatar.url }}" class="user-avatar" alt="">
+                    {% else %}
+                        <span class="user-avatar">{{ topic.created_by.username|user_initials }}</span>
+                    {% endif %}
+                    <div>
+                        <div class="fw-semibold small">{{ topic.created_by.username }}</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">Motion Proponent</div>
+                    </div>
+                </a>
+
+                <div class="d-flex align-items-center gap-2">
+                    {% if user.is_authenticated %}
+                        <button class="btn btn-outline-secondary btn-sm bookmark-btn-ajax {% if is_bookmarked %}active{% endif %}" data-url="{% url 'topic_bookmark' topic.pk %}" title="Bookmark Debate">
+                            <i class="{% if is_bookmarked %}fa-solid fa-bookmark text-primary{% else %}fa-regular fa-bookmark{% endif %} me-1"></i>
+                            <span>Save</span>
+                        </button>
+                    {% endif %}
+                    <button class="btn btn-outline-secondary btn-sm btn-share-debate" title="Copy Share Link">
+                        <i class="fa-solid fa-share-nodes me-1"></i> Share
+                    </button>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'report_topic' topic.pk %}" class="btn btn-outline-danger btn-sm" title="Report Inappropriate Content">
+                            <i class="fa-regular fa-flag"></i>
+                        </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
-        <div class="card p-4 mb-4">
-            <h4 class="fw-bold mb-3">Voting</h4>
+        <!-- The Arena: Live Voting Dashboard -->
+        <div class="card p-4 mb-4 shadow-sm border-2">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold mb-0">
+                    <i class="fa-solid fa-scale-unbalanced text-primary me-2"></i>Debate Arena: Cast Your Stance
+                </h4>
+                <span class="small text-muted fw-semibold" id="vote-total-count">{{ total_votes }} total votes cast</span>
+            </div>
+
+            <!-- Live Split Progress Bar -->
+            <div class="arena-vote-bar mb-3">
+                <div class="vote-segment-for" id="vote-bar-for" style="width: {{ for_percent }}%;">
+                    <i class="fa-solid fa-thumbs-up me-2"></i> {{ for_percent }}% For
+                </div>
+                <div class="vote-segment-against" id="vote-bar-against" style="width: {{ against_percent }}%;">
+                    {{ against_percent }}% Against <i class="fa-solid fa-thumbs-down ms-2"></i>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between small text-muted mb-4">
+                <span class="text-success fw-bold"><i class="fa-solid fa-arrow-up me-1"></i><span id="vote-count-for">{{ for_count }}</span> in favor</span>
+                <span class="text-danger fw-bold"><span id="vote-count-against">{{ against_count }}</span> against <i class="fa-solid fa-arrow-down ms-1"></i></span>
+            </div>
+
+            <!-- Interactive Voting Buttons -->
             {% if user.is_authenticated %}
-                <form method="post" action="{% url 'topic_vote' topic.pk %}">
+                <form id="debate-vote-form" method="post" action="{% url 'topic_vote' topic.pk %}">
                     {% csrf_token %}
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        <button type="submit" name="choice" value="for" class="btn btn-success vote-pill">For</button>
-                        <button type="submit" name="choice" value="against" class="btn btn-danger vote-pill">Against</button>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <button type="submit" name="choice" value="for" class="btn btn-vote-for btn-vote-choice w-100 py-2 {% if user_vote and user_vote.choice == 'for' %}active{% endif %}">
+                                <i class="fa-solid fa-thumbs-up me-1"></i> VOTE IN FAVOR
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="submit" name="choice" value="against" class="btn btn-vote-against btn-vote-choice w-100 py-2 {% if user_vote and user_vote.choice == 'against' %}active{% endif %}">
+                                <i class="fa-solid fa-thumbs-down me-1"></i> VOTE AGAINST
+                            </button>
+                        </div>
                     </div>
                 </form>
-                {% if user_vote %}
-                    <p class="mb-0 text-muted">You currently voted: <strong>{{ user_vote.choice }}</strong></p>
-                {% endif %}
-            {% else %}
-                <p class="mb-0 text-muted">Log in to cast your vote.</p>
-            {% endif %}
-            <div class="mt-4">
-                <div class="progress" style="height: 18px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ for_percent }}%">{{ for_percent }}%</div>
-                    <div class="progress-bar bg-danger" role="progressbar" style="width: {{ against_percent }}%">{{ against_percent }}%</div>
+
+                <div id="user-current-vote-banner" class="mt-2 text-center">
+                    {% if user_vote %}
+                        <span class="badge {% if user_vote.choice == 'for' %}bg-success{% else %}bg-danger{% endif %} px-3 py-2">
+                            <i class="fa-solid fa-circle-check me-1"></i> Your current stance: {{ user_vote.choice|upper }}
+                        </span>
+                    {% else %}
+                        <span class="text-muted small">You have not voted on this debate yet. Choose your stance above!</span>
+                    {% endif %}
                 </div>
-                <div class="d-flex justify-content-between small text-muted mt-2">
-                    <span>{{ for_count }} For</span>
-                    <span>{{ against_count }} Against</span>
-                    <span>{{ total_votes }} total votes</span>
+            {% else %}
+                <div class="p-3 text-center bg-body-tertiary rounded-3 border">
+                    <p class="text-muted small mb-2"><i class="fa-solid fa-lock me-1"></i> You must be signed in to cast a verified stance.</p>
+                    <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary btn-sm px-4">Sign in to Vote</a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Arguments Perspective Filter Tabs -->
+        <div class="card p-3 mb-4 shadow-sm">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <span class="fw-bold small text-muted text-uppercase">Filter Arguments:</span>
+                <div class="d-flex gap-1 flex-wrap">
+                    <a href="?stance=all" class="btn btn-sm {% if stance_filter == 'all' or not stance_filter %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+                        All ({{ counts_by_stance.all }})
+                    </a>
+                    <a href="?stance=for" class="btn btn-sm {% if stance_filter == 'for' %}btn-success text-white{% else %}btn-outline-success{% endif %} rounded-pill px-3">
+                        <i class="fa-solid fa-thumbs-up me-1"></i> In Favor ({{ counts_by_stance.for }})
+                    </a>
+                    <a href="?stance=against" class="btn btn-sm {% if stance_filter == 'against' %}btn-danger text-white{% else %}btn-outline-danger{% endif %} rounded-pill px-3">
+                        <i class="fa-solid fa-thumbs-down me-1"></i> Against ({{ counts_by_stance.against }})
+                    </a>
+                    <a href="?stance=neutral" class="btn btn-sm {% if stance_filter == 'neutral' %}btn-secondary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+                        <i class="fa-regular fa-comments me-1"></i> Neutral ({{ counts_by_stance.neutral }})
+                    </a>
                 </div>
             </div>
         </div>
 
-        <div class="card p-4">
-            <h4 class="fw-bold mb-3">Comments</h4>
+        <!-- Post an Argument Card -->
+        <div class="card p-4 mb-4 shadow-sm">
+            <h4 class="fw-bold mb-3"><i class="fa-regular fa-comment-dots text-primary me-2"></i>Contribute to Discourse</h4>
             {% if user.is_authenticated %}
-                <form method="post" class="mb-4">
+                <form method="post" action="">
                     {% csrf_token %}
-                    {{ comment_form.text }}
-                    <div class="mt-2 text-end">
-                        <button type="submit" class="btn btn-primary">Post comment</button>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold">Declare Your Argument Stance:</label>
+                            <select name="stance" class="form-select">
+                                <option value="for">Supporting: In Favor (Pro)</option>
+                                <option value="against">Rebuttal: Against (Con)</option>
+                                <option value="neutral" selected>Neutral Inquiry / Analysis</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <textarea name="text" class="form-control" rows="3" placeholder="Formulate your premise clearly with logic or evidence..." required></textarea>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted small" style="font-size: 0.75rem;">
+                            <i class="fa-solid fa-shield me-1 text-primary"></i> Be civil, thoughtful, and evidence-driven.
+                        </span>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="fa-regular fa-paper-plane me-1"></i> Post Argument
+                        </button>
                     </div>
                 </form>
             {% else %}
-                <p class="text-muted">Sign in to join the conversation.</p>
+                <div class="p-3 text-center bg-body-tertiary rounded-3 border">
+                    <p class="text-muted mb-2">Join the debate community to share your perspective.</p>
+                    <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary btn-sm px-4">Log in to Post Argument</a>
+                </div>
             {% endif %}
+        </div>
+
+        <!-- Arguments Stream -->
+        <div class="arguments-stream">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold mb-0">Community Arguments</h4>
+                <span class="text-muted small">{{ comments.count }} active threads</span>
+            </div>
 
             {% for comment in comments %}
-                <div class="card comment-card p-3 mb-3">
-                    <div class="d-flex justify-content-between gap-2">
+                <div class="argument-card stance-{{ comment.stance }}" id="comment-{{ comment.pk }}">
+                    <!-- Author & Stance Header -->
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
                         <div class="d-flex align-items-center gap-2">
-                            {% if comment.user.profile.avatar %}
-                                <img src="{{ comment.user.profile.avatar.url }}" class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;">
-                            {% endif %}
+                            <a href="{% url 'user_profile' comment.user.username %}" class="text-decoration-none">
+                                {% if comment.user.profile.avatar %}
+                                    <img src="{{ comment.user.profile.avatar.url }}" class="user-avatar" alt="">
+                                {% else %}
+                                    <span class="user-avatar">{{ comment.user.username|user_initials }}</span>
+                                {% endif %}
+                            </a>
                             <div>
-                                <strong>{{ comment.user.username }}</strong>
-                                <div class="small text-muted">{{ comment.created_at|date:'M d, Y H:i' }}</div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <a href="{% url 'user_profile' comment.user.username %}" class="fw-bold text-decoration-none text-reset small">
+                                        {{ comment.user.username }}
+                                    </a>
+                                    <span class="badge {{ comment.user.profile.rank_badge.class }} rounded-pill" style="font-size: 0.65rem;">
+                                        <i class="fa-solid {{ comment.user.profile.rank_badge.icon }} me-1"></i>{{ comment.user.profile.rank_badge.title }}
+                                    </span>
+                                </div>
+                                <div class="text-muted" style="font-size: 0.72rem;">
+                                    <i class="fa-regular fa-clock me-1"></i>{{ comment.created_at|timesince }} ago
+                                </div>
                             </div>
                         </div>
-                        {% if user == comment.user %}
-                            <div class="d-flex gap-2">
-                                <a href="{% url 'comment_edit' comment.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
-                                <a href="{% url 'comment_delete' comment.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <!-- Stance Indicator Badge -->
+                            {% if comment.stance == 'for' %}
+                                <span class="stance-badge stance-for"><i class="fa-solid fa-thumbs-up"></i> IN FAVOR</span>
+                            {% elif comment.stance == 'against' %}
+                                <span class="stance-badge stance-against"><i class="fa-solid fa-thumbs-down"></i> AGAINST</span>
+                            {% else %}
+                                <span class="stance-badge stance-neutral"><i class="fa-regular fa-comment"></i> NEUTRAL</span>
+                            {% endif %}
+
+                            <!-- Dropdown Actions for author or report -->
+                            <div class="dropdown">
+                                <button class="btn btn-link text-muted p-0 text-decoration-none" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border p-1 small">
+                                    {% if user == comment.user %}
+                                        <li><a class="dropdown-item py-1" href="{% url 'comment_edit' comment.pk %}"><i class="fa-regular fa-pen-to-square me-2 text-primary"></i> Edit</a></li>
+                                        <li><a class="dropdown-item py-1 text-danger" href="{% url 'comment_delete' comment.pk %}" onclick="return confirm('Are you sure you want to delete this argument?')"><i class="fa-regular fa-trash-can me-2"></i> Delete</a></li>
+                                    {% else %}
+                                        {% if user.is_authenticated %}
+                                            <li><a class="dropdown-item py-1 text-danger" href="{% url 'report_comment' comment.pk %}"><i class="fa-regular fa-flag me-2"></i> Report</a></li>
+                                        {% endif %}
+                                    {% endif %}
+                                </ul>
                             </div>
-                        {% else %}
-                            <a href="{% url 'report_comment' comment.pk %}" class="btn btn-sm btn-outline-danger">Report</a>
+                        </div>
+                    </div>
+
+                    <!-- Argument Text -->
+                    <div class="mb-3 text-secondary" style="font-size: 0.95rem; line-height: 1.6;">
+                        {{ comment.text|linebreaksbr }}
+                    </div>
+
+                    <!-- Reactions Toolbar & Reply Button -->
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-2 border-top">
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for emoji, label in reaction_choices %}
+                                <form method="post" action="{% url 'comment_react' comment.pk %}" class="reaction-form-ajax d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="comment_id" value="{{ comment.pk }}">
+                                    <input type="hidden" name="reaction" value="{{ emoji }}">
+                                    <button type="submit" class="reaction-btn" title="React with {{ label }}">
+                                        <span>{{ label }}</span>
+                                        <span class="reaction-count-{{ emoji }} fw-bold">{{ comment.reaction_counts|get_item:emoji|default:0 }}</span>
+                                    </button>
+                                </form>
+                            {% endfor %}
+                        </div>
+
+                        {% if user.is_authenticated %}
+                            <button type="button" class="btn btn-link text-decoration-none btn-sm text-primary btn-toggle-reply p-0" data-target="reply-box-{{ comment.pk }}">
+                                <i class="fa-solid fa-reply me-1"></i> Reply
+                            </button>
                         {% endif %}
                     </div>
-                    <p class="mb-3 mt-2">{{ comment.text }}</p>
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        {% for emoji, label in reaction_choices %}
-                            <form method="post" class="d-inline">
+
+                    <!-- Inline Reply Box -->
+                    {% if user.is_authenticated %}
+                        <div class="reply-form-container d-none mt-3 p-3 bg-body-tertiary rounded border" id="reply-box-{{ comment.pk }}">
+                            <form method="post" action="">
                                 {% csrf_token %}
-                                <input type="hidden" name="comment_id" value="{{ comment.pk }}">
-                                <input type="hidden" name="reaction" value="{{ emoji }}">
-                                <button type="submit" class="btn btn-sm btn-outline-secondary">{{ label }} ({{ comment.reaction_counts|get_item:emoji|default:0 }})</button>
-                            </form>
-                        {% endfor %}
-                    </div>
-
-                    <form method="post" action="" class="mb-3">
-                        {% csrf_token %}
-                        <input type="hidden" name="parent_id" value="{{ comment.pk }}">
-                        <textarea name="text" class="form-control" rows="2" placeholder="Reply to this comment..."></textarea>
-                        <div class="text-end mt-2"><button type="submit" class="btn btn-sm btn-secondary">Reply</button></div>
-                    </form>
-
-                    {% for reply in comment.replies.all %}
-                        <div class="card border-0 bg-light p-3 ms-4 mb-2">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <strong>{{ reply.user.username }}</strong>
-                                    <div class="small text-muted">{{ reply.created_at|date:'M d, Y H:i' }}</div>
+                                <input type="hidden" name="parent_id" value="{{ comment.pk }}">
+                                <div class="mb-2">
+                                    <select name="stance" class="form-select form-select-sm" style="max-width: 220px;">
+                                        <option value="for">Reply Stance: In Favor</option>
+                                        <option value="against">Reply Stance: Rebuttal</option>
+                                        <option value="neutral" selected>Reply Stance: Discussion</option>
+                                    </select>
                                 </div>
-                                {% if user == reply.user %}
-                                    <div class="d-flex gap-2">
-                                        <a href="{% url 'comment_edit' reply.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
-                                        <a href="{% url 'comment_delete' reply.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
-                                    </div>
-                                {% else %}
-                                    <a href="{% url 'report_comment' reply.pk %}" class="btn btn-sm btn-outline-danger">Report</a>
-                                {% endif %}
-                            </div>
-                            <p class="mb-0 mt-2">{{ reply.text }}</p>
-                            <div class="d-flex flex-wrap gap-2 mt-3">
-                                {% for emoji, label in reaction_choices %}
-                                    <form method="post" class="d-inline">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="comment_id" value="{{ reply.pk }}">
-                                        <input type="hidden" name="reaction" value="{{ emoji }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary">{{ label }} ({{ reply.reaction_counts|get_item:emoji|default:0 }})</button>
-                                    </form>
-                                {% endfor %}
-                            </div>
+                                <div class="mb-2">
+                                    <textarea name="text" class="form-control form-control-sm" rows="2" placeholder="Write your counter-argument or clarification..." required></textarea>
+                                </div>
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm btn-toggle-reply" data-target="reply-box-{{ comment.pk }}">Cancel</button>
+                                    <button type="submit" class="btn btn-primary btn-sm">Submit Reply</button>
+                                </div>
+                            </form>
                         </div>
-                    {% endfor %}
+                    {% endif %}
+
+                    <!-- Nested Replies Tree -->
+                    {% if comment.replies.all %}
+                        <div class="replies-list mt-3">
+                            {% for reply in comment.replies.all %}
+                                <div class="reply-card stance-{{ reply.stance }}" id="comment-{{ reply.pk }}">
+                                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <a href="{% url 'user_profile' reply.user.username %}" class="text-decoration-none">
+                                                {% if reply.user.profile.avatar %}
+                                                    <img src="{{ reply.user.profile.avatar.url }}" class="user-avatar" style="width: 28px; height: 28px;" alt="">
+                                                {% else %}
+                                                    <span class="user-avatar" style="width: 28px; height: 28px; font-size: 0.7rem;">{{ reply.user.username|user_initials }}</span>
+                                                {% endif %}
+                                            </a>
+                                            <div>
+                                                <div class="fw-bold small">{{ reply.user.username }}</div>
+                                                <div class="text-muted" style="font-size: 0.68rem;">{{ reply.created_at|timesince }} ago</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2">
+                                            {% if reply.stance == 'for' %}
+                                                <span class="stance-badge stance-for" style="font-size: 0.65rem;">PRO</span>
+                                            {% elif reply.stance == 'against' %}
+                                                <span class="stance-badge stance-against" style="font-size: 0.65rem;">CON</span>
+                                            {% endif %}
+
+                                            {% if user == reply.user %}
+                                                <a href="{% url 'comment_delete' reply.pk %}" class="text-danger small" title="Delete reply" onclick="return confirm('Delete this reply?')">
+                                                    <i class="fa-regular fa-trash-can"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-2 small text-secondary" style="line-height: 1.5;">
+                                        {{ reply.text|linebreaksbr }}
+                                    </div>
+
+                                    <!-- Reactions on Replies -->
+                                    <div class="d-flex flex-wrap gap-1 pt-1">
+                                        {% for emoji, label in reaction_choices %}
+                                            <form method="post" action="{% url 'comment_react' reply.pk %}" class="reaction-form-ajax d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="comment_id" value="{{ reply.pk }}">
+                                                <input type="hidden" name="reaction" value="{{ emoji }}">
+                                                <button type="submit" class="reaction-btn py-0 px-2" style="font-size: 0.72rem;" title="{{ label }}">
+                                                    <span>{{ label }}</span>
+                                                    <span class="reaction-count-{{ emoji }}">{{ reply.reaction_counts|get_item:emoji|default:0 }}</span>
+                                                </button>
+                                            </form>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                 </div>
             {% empty %}
-                <p class="text-muted mb-0">No comments yet. Start the discussion.</p>
+                <div class="card p-4 text-center shadow-sm">
+                    <p class="text-muted mb-0"><i class="fa-regular fa-message me-1"></i> No arguments found for this filter yet. Be the first to stake your claim!</p>
+                </div>
             {% endfor %}
         </div>
     </div>
 
+    <!-- Right Sidebar Information Column -->
     <div class="col-lg-4">
-        <div class="card p-4">
-            <h5 class="fw-bold mb-3">Recent activity</h5>
-            {% for vote in vote_history|slice:':5' %}
-                <div class="border-bottom py-2">
-                    <div class="small text-muted">{{ vote.user.username }} voted <strong>{{ vote.choice }}</strong></div>
-                </div>
-            {% empty %}
-                <p class="mb-0 text-muted small">No votes yet.</p>
-            {% endfor %}
+        <!-- Live Vote Tally Breakdown -->
+        <div class="card p-3 mb-4 shadow-sm">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-chart-pie text-primary me-2"></i>Stance Breakdown</h5>
+            <div class="d-flex justify-content-between align-items-center p-2 rounded mb-2 bg-success bg-opacity-10 border border-success border-opacity-25">
+                <span class="fw-semibold text-success"><i class="fa-solid fa-thumbs-up me-2"></i>In Favor</span>
+                <span class="fw-bold fs-5 text-success">{{ for_percent }}% <span class="small fw-normal text-muted">({{ for_count }})</span></span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center p-2 rounded mb-3 bg-danger bg-opacity-10 border border-danger border-opacity-25">
+                <span class="fw-semibold text-danger"><i class="fa-solid fa-thumbs-down me-2"></i>Against</span>
+                <span class="fw-bold fs-5 text-danger">{{ against_percent }}% <span class="small fw-normal text-muted">({{ against_count }})</span></span>
+            </div>
+            <div class="small text-muted text-center">
+                Total Participation: <strong>{{ total_votes }}</strong> stances recorded
+            </div>
         </div>
+
+        <!-- Recent Debaters Activity -->
+        <div class="card p-3 mb-4 shadow-sm">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-users text-primary me-2"></i>Recent Votes Cast</h5>
+            <div class="d-flex flex-column gap-2">
+                {% for vote in vote_history|slice:':6' %}
+                    <div class="d-flex align-items-center justify-content-between border-bottom pb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="user-avatar" style="width: 26px; height: 26px; font-size: 0.65rem;">
+                                {{ vote.user.username|user_initials }}
+                            </span>
+                            <span class="small fw-medium">{{ vote.user.username }}</span>
+                        </div>
+                        <span class="badge {% if vote.choice == 'for' %}bg-success{% else %}bg-danger{% endif %} rounded-pill px-2 py-1" style="font-size: 0.68rem;">
+                            {{ vote.choice|upper }}
+                        </span>
+                    </div>
+                {% empty %}
+                    <p class="text-muted small mb-0">No votes recorded yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Related Debates -->
+        {% if related_topics %}
+            <div class="card p-3 mb-4 shadow-sm">
+                <h5 class="fw-bold mb-3"><i class="fa-regular fa-compass text-primary me-2"></i>Related in {{ topic.category|title }}</h5>
+                <div class="d-flex flex-column gap-3">
+                    {% for rel in related_topics %}
+                        <div>
+                            <a href="{% url 'topic_detail' rel.pk %}" class="small fw-semibold text-decoration-none text-reset d-block mb-1">
+                                {{ rel.title|truncatewords:8 }}
+                            </a>
+                            <div class="small text-muted d-flex gap-2" style="font-size: 0.72rem;">
+                                <span>{{ rel.total_votes }} votes</span>
+                                <span>•</span>
+                                <span>{{ rel.comment_count }} comments</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

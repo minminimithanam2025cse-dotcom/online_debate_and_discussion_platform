@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load debate_tags %}
+
+{% block title %}Leaderboard — Top Debaters & Intellectual Contributors{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Hero Header -->
+        <div class="card p-4 mb-4 shadow-sm text-center position-relative overflow-hidden" style="background: radial-gradient(circle at top, rgba(79, 70, 229, 0.12) 0%, transparent 70%);">
+            <span class="badge bg-warning bg-opacity-10 text-dark border border-warning rounded-pill px-3 py-2 mb-2 d-inline-block fw-bold mx-auto" style="max-width: fit-content;">
+                <i class="fa-solid fa-trophy me-1 text-warning"></i> HALL OF DISCOURSE
+            </span>
+            <h1 class="display-6 fw-bold mb-2">Debater Leaderboard</h1>
+            <p class="text-muted mb-0 mx-auto" style="max-width: 620px;">
+                Honoring the most articulate, well-reasoned, and impactful participants across our community. Reputation is earned by starting motions, crafting substantiated arguments, and receiving insightful reactions.
+            </p>
+        </div>
+
+        <!-- Leaderboard Table Card -->
+        <div class="card shadow-sm overflow-hidden mb-4">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="ps-4" style="width: 80px;">Rank</th>
+                            <th scope="col">Debater</th>
+                            <th scope="col" class="text-center">Reputation Score</th>
+                            <th scope="col" class="text-center">Debates Started</th>
+                            <th scope="col" class="text-center">Arguments Filed</th>
+                            <th scope="col" class="text-center">Votes Cast</th>
+                            <th scope="col" class="text-end pe-4">Rank Title</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for debater in top_debaters %}
+                            <tr>
+                                <td class="ps-4">
+                                    {% if forloop.counter == 1 %}
+                                        <div class="rank-medal rank-1"><i class="fa-solid fa-crown text-warning"></i></div>
+                                    {% elif forloop.counter == 2 %}
+                                        <div class="rank-medal rank-2">2</div>
+                                    {% elif forloop.counter == 3 %}
+                                        <div class="rank-medal rank-3">3</div>
+                                    {% else %}
+                                        <span class="fw-bold text-muted ps-2">{{ forloop.counter }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'user_profile' debater.user.username %}" class="d-flex align-items-center gap-3 text-decoration-none text-reset">
+                                        {% if debater.profile.avatar %}
+                                            <img src="{{ debater.profile.avatar.url }}" class="user-avatar" alt="">
+                                        {% else %}
+                                            <span class="user-avatar">{{ debater.user.username|user_initials }}</span>
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-bold">{{ debater.user.username }}</div>
+                                            <div class="text-muted small" style="font-size: 0.72rem;">Joined {{ debater.user.date_joined|date:'M Y' }}</div>
+                                        </div>
+                                    </a>
+                                </td>
+                                <td class="text-center">
+                                    <span class="fw-bold fs-5 text-primary">{{ debater.score }}</span>
+                                    <span class="text-muted small d-block" style="font-size: 0.7rem;">pts</span>
+                                </td>
+                                <td class="text-center fw-semibold text-secondary">
+                                    {{ debater.topic_count }}
+                                </td>
+                                <td class="text-center fw-semibold text-secondary">
+                                    {{ debater.comment_count }}
+                                </td>
+                                <td class="text-center fw-semibold text-secondary">
+                                    {{ debater.vote_count }}
+                                </td>
+                                <td class="text-end pe-4">
+                                    <span class="badge {{ debater.badge.class }} rounded-pill px-3 py-2">
+                                        <i class="fa-solid {{ debater.badge.icon }} me-1"></i>{{ debater.badge.title }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    No debaters recorded yet.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Reputation Rules Card -->
+        <div class="card p-4 shadow-sm bg-body-tertiary">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-award text-warning me-2"></i>How Reputation is Calculated</h5>
+            <div class="row g-3 text-secondary small">
+                <div class="col-md-3">
+                    <div class="p-3 bg-card rounded border h-100">
+                        <div class="fw-bold text-primary mb-1">+15 Points</div>
+                        <div>Creating an approved debate topic motion.</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-card rounded border h-100">
+                        <div class="fw-bold text-success mb-1">+5 Points</div>
+                        <div>Posting a structured argument or rebuttal.</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-card rounded border h-100">
+                        <div class="fw-bold text-warning mb-1">+4 Points</div>
+                        <div>Receiving an Insightful or Well Argued reaction.</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-card rounded border h-100">
+                        <div class="fw-bold text-info mb-1">+2 Points</div>
+                        <div>Casting a verified stance vote on an active debate.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

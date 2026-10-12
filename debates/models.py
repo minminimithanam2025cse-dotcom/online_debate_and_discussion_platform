@@ -23,11 +23,19 @@ class Topic(models.Model):
         ('general', 'General'),
     ]
 
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('concluded', 'Concluded'),
+    ]
+
     title = models.CharField(max_length=200)
     description = models.TextField()
     category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default='general')
     tags = models.ManyToManyField(Tag, related_name='topics', blank=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='topics')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    is_featured = models.BooleanField(default=False)
+    views_count = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -52,11 +60,28 @@ class Topic(models.Model):
     def total_votes(self):
         return self.votes.count()
 
+    @property
+    def for_percentage(self):
+        total = self.total_votes
+        return round((self.for_votes / total) * 100, 1) if total > 0 else 50.0
+
+    @property
+    def against_percentage(self):
+        total = self.total_votes
+        return round((self.against_votes / total) * 100, 1) if total > 0 else 50.0
+
 
 class Comment(models.Model):
+    STANCE_CHOICES = [
+        ('for', 'In Favor (Pro)'),
+        ('against', 'Against (Con)'),
+        ('neutral', 'Neutral / Discussion'),
+    ]
+
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='comments')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
     text = models.TextField()
+    stance = models.CharField(max_length=10, choices=STANCE_CHOICES, default='neutral')
     parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -80,9 +105,10 @@ class Comment(models.Model):
 
 class Reaction(models.Model):
     EMOJI_CHOICES = [
-        ('like', 'Like'),
-        ('dislike', 'Dislike'),
-        ('insightful', 'Insightful'),
+        ('like', 'Like 👍'),
+        ('dislike', 'Dislike 👎'),
+        ('insightful', 'Insightful 💡'),
+        ('well_argued', 'Well Argued 🎯'),
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reactions')
@@ -119,6 +145,21 @@ class Vote(models.Model):
         return f'{self.user.username} voted {self.choice} on {self.topic.title}'
 
 
+class Bookmark(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bookmarks')
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='bookmarks')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'topic'], name='unique_bookmark_per_user_per_topic')
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} bookmarked {self.topic.title}'
+
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     bio = models.TextField(blank=True)
@@ -127,6 +168,35 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.user.username
+
+    @property
+    def avatar_url(self):
+        if self.avatar and hasattr(self.avatar, 'url'):
+            try:
+                return self.avatar.url
+            except Exception:
+                pass
+        return f"https://ui-avatars.com/api/?name={self.user.username}&background=0d6efd&color=fff&bold=true"
+
+    @property
+    def reputation_score(self):
+        # 15 pts per topic, 5 pts per comment, 2 pts per vote cast, 4 pts per reaction received on comments
+        topic_pts = self.user.topics.count() * 15
+        comment_pts = self.user.comments.count() * 5
+        vote_pts = self.user.votes.count() * 2
+        reaction_pts = Reaction.objects.filter(comment__user=self.user).count() * 4
+        return topic_pts + comment_pts + vote_pts + reaction_pts
+
+    @property
+    def rank_badge(self):
+        score = self.reputation_score
+        if score >= 100:
+            return {'title': 'Grand Debater', 'class': 'badge-grand', 'icon': 'fa-crown'}
+        elif score >= 50:
+            return {'title': 'Master of Logic', 'class': 'badge-master', 'icon': 'fa-award'}
+        elif score >= 20:
+            return {'title': 'Active Contributor', 'class': 'badge-contributor', 'icon': 'fa-fire'}
+        return {'title': 'Novice Debater', 'class': 'badge-novice', 'icon': 'fa-seedling'}
 
 
 class Notification(models.Model):

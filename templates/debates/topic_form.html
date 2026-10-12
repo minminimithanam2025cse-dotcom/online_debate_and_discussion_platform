@@ -1,20 +1,84 @@
 {% extends 'base.html' %}
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Create Debate Motion — DebateSphere{% endblock %}
+
 {% block content %}
-<div class="card form-card p-4">
-    <h2 class="fw-bold mb-3">{{ title }}</h2>
-    <form method="post">
-        {% csrf_token %}
-        {% for field in form %}
-            <div class="mb-3">
-                <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% if field.errors %}
-                    <div class="text-danger small mt-1">{{ field.errors|join:' ' }}</div>
-                {% endif %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card p-4 shadow-sm mb-4 form-card">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="brand-icon" style="width: 32px; height: 32px; font-size: 0.85rem;">
+                    <i class="fa-solid fa-plus"></i>
+                </span>
+                <h2 class="fw-bold mb-0">Create a New Debate Motion</h2>
             </div>
-        {% endfor %}
-        <button type="submit" class="btn btn-primary">Save Topic</button>
-    </form>
+            <p class="text-muted small mb-4">Post a clearly phrased proposition or policy dilemma for structured community argumentation.</p>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="{{ form.title.id_for_label }}">
+                        <i class="fa-solid fa-heading me-1 text-primary"></i> Debate Motion Title
+                    </label>
+                    {{ form.title }}
+                    <div class="form-text small">Phrase as a definitive statement or clear proposition (e.g. "Should Artificial General Intelligence research be regulated by an international treaty?").</div>
+                    {% if form.title.errors %}
+                        <div class="text-danger small mt-1">{{ form.title.errors|join:' ' }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="{{ form.category.id_for_label }}">
+                            <i class="fa-solid fa-tag me-1 text-primary"></i> Primary Category
+                        </label>
+                        {{ form.category }}
+                        {% if form.category.errors %}
+                            <div class="text-danger small mt-1">{{ form.category.errors|join:' ' }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="{{ form.tags_input.id_for_label }}">
+                            <i class="fa-solid fa-hashtag me-1 text-primary"></i> Tags (Comma-separated)
+                        </label>
+                        {{ form.tags_input }}
+                        <div class="form-text small">e.g. ai-ethics, governance, tech</div>
+                        {% if form.tags_input.errors %}
+                            <div class="text-danger small mt-1">{{ form.tags_input.errors|join:' ' }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold" for="{{ form.description.id_for_label }}">
+                        <i class="fa-solid fa-align-left me-1 text-primary"></i> Motion Context & Framing
+                    </label>
+                    {{ form.description }}
+                    <div class="form-text small">Provide balanced background context, defining terms and presenting both sides of the tension fairly.</div>
+                    {% if form.description.errors %}
+                        <div class="text-danger small mt-1">{{ form.description.errors|join:' ' }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                    <a href="{% url 'topic_list' %}" class="btn btn-outline-secondary">
+                        <i class="fa-solid fa-arrow-left me-1"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="fa-solid fa-paper-plane me-1"></i> Publish Debate Motion
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Best Practices Helper Card -->
+        <div class="card p-4 shadow-sm bg-body-tertiary">
+            <h6 class="fw-bold mb-2"><i class="fa-regular fa-lightbulb text-warning me-1"></i> Guidelines for High-Quality Motions:</h6>
+            <ul class="small text-muted ps-3 mb-0" style="line-height: 1.6;">
+                <li><strong>Clear Dichotomy:</strong> Ensure the motion lends itself to substantive arguments both "In Favor" and "Against".</li>
+                <li><strong>Neutral Framing:</strong> Avoid loaded or leading questions in the title itself.</li>
+                <li><strong>Relevance:</strong> Topics focused on ethics, economics, tech, and policy create the richest discourse.</li>
+            </ul>
+        </div>
+    </div>
 </div>
 {% endblock %}

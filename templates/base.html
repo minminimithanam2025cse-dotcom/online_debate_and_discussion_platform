@@ -1,73 +1,227 @@
-{% load static %}
+{% load static debate_tags %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Debate Platform{% endblock %}</title>
+    <title>{% block title %}DebateSphere — Structured Civil Discourse{% endblock %}</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Bootstrap 5.3.3 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Custom Stylesheet -->
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <!-- Top Navigation Bar -->
+    <nav class="navbar navbar-expand-lg main-navbar">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="{% url 'topic_list' %}">Debate Platform</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
-                <span class="navbar-toggler-icon"></span>
+            <a class="navbar-brand brand-logo" href="{% url 'topic_list' %}">
+                <span class="brand-icon">
+                    <i class="fa-solid fa-scale-balanced"></i>
+                </span>
+                <span>Debate<span class="text-primary">Sphere</span></span>
+            </a>
+
+            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+                <i class="fa-solid fa-bars-staggered"></i>
             </button>
+
             <div class="collapse navbar-collapse" id="mainNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="{% url 'topic_list' %}">Topics</a></li>
-                    {% if user.is_authenticated %}
-                        <li class="nav-item"><a class="nav-link" href="{% url 'topic_create' %}">Create Topic</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{% url 'user_profile' user.username %}">Profile</a></li>
-                        {% if user.is_staff %}
-                            <li class="nav-item"><a class="nav-link" href="{% url 'moderation_reports' %}">Moderation</a></li>
-                        {% endif %}
-                    {% endif %}
-                </ul>
-                <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
-                    {% if user.is_authenticated %}
+                <ul class="navbar-nav me-auto align-items-lg-center gap-1 mt-3 mt-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'topic_list' %}active{% endif %}" href="{% url 'topic_list' %}">
+                            <i class="fa-regular fa-compass me-1"></i> Explore Debates
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'leaderboard' %}active{% endif %}" href="{% url 'leaderboard' %}">
+                            <i class="fa-solid fa-trophy me-1 text-warning"></i> Leaderboard
+                        </a>
+                    </li>
+                    {% if user.is_authenticated and user.is_staff %}
                         <li class="nav-item">
-                            <a class="nav-link position-relative" href="{% url 'notifications_page' %}">
-                                🔔
-                                {% if unread_notifications_count %}
-                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ unread_notifications_count }}</span>
-                                {% endif %}
+                            <a class="nav-link {% if request.resolver_match.url_name == 'moderation_reports' %}active{% endif %}" href="{% url 'moderation_reports' %}">
+                                <i class="fa-solid fa-shield-halved me-1 text-danger"></i> Moderation
                             </a>
                         </li>
-                        <li class="nav-item text-white">Hello, {{ user.username }}</li>
-                        <li class="nav-item"><a class="btn btn-outline-light btn-sm" href="{% url 'logout' %}">Logout</a></li>
-                    {% else %}
-                        <li class="nav-item"><a class="btn btn-outline-light btn-sm" href="{% url 'login' %}">Login</a></li>
-                        <li class="nav-item"><a class="btn btn-light btn-sm" href="{% url 'signup' %}">Sign Up</a></li>
                     {% endif %}
                 </ul>
+
+                <div class="d-flex align-items-center gap-2 mt-3 mt-lg-0 flex-wrap">
+                    <!-- Create Debate Button -->
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'topic_create' %}" class="btn btn-primary btn-sm px-3">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>New Debate</span>
+                        </a>
+                    {% endif %}
+
+                    <!-- Theme Toggle Switch -->
+                    <button type="button" class="btn btn-link text-decoration-none p-2" id="theme-toggle-btn" title="Toggle theme">
+                        <i class="fa-solid fa-moon text-secondary"></i>
+                    </button>
+
+                    {% if user.is_authenticated %}
+                        <!-- Notifications Dropdown -->
+                        <div class="dropdown">
+                            <button class="btn btn-link text-decoration-none p-2 position-relative text-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+                                <i class="fa-regular fa-bell fs-5"></i>
+                                {% if unread_notifications_count %}
+                                    <span class="position-absolute top-1 start-75 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+                                        {{ unread_notifications_count }}
+                                    </span>
+                                {% endif %}
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border p-2" style="width: 320px; max-height: 400px; overflow-y: auto;">
+                                <li class="d-flex justify-content-between align-items-center px-2 py-1 mb-2 border-bottom">
+                                    <span class="fw-bold small">Notifications</span>
+                                    {% if unread_notifications_count %}
+                                        <a href="{% url 'mark_all_notifications_read' %}" class="small text-decoration-none text-primary" style="font-size: 0.75rem;">Mark all read</a>
+                                    {% endif %}
+                                </li>
+                                {% if navbar_notifications %}
+                                    {% for notif in navbar_notifications %}
+                                        <li>
+                                            <a class="dropdown-item p-2 rounded small text-wrap border-bottom" href="{% if notif.link %}{% url 'mark_notification_read' notif.pk %}{% else %}{% url 'notifications_page' %}{% endif %}">
+                                                <div class="fw-semibold mb-1">{{ notif.message }}</div>
+                                                <div class="text-muted" style="font-size: 0.7rem;"><i class="fa-regular fa-clock me-1"></i>{{ notif.created_at|timesince }} ago</div>
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                    <li class="text-center pt-2">
+                                        <a href="{% url 'notifications_page' %}" class="small text-decoration-none fw-semibold">View all notifications</a>
+                                    </li>
+                                {% else %}
+                                    <li class="text-center text-muted py-3 small">
+                                        <i class="fa-regular fa-bell-slash mb-2 fs-5 d-block"></i>
+                                        No unread notifications
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+
+                        <!-- User Profile Dropdown -->
+                        <div class="dropdown">
+                            <button class="btn btn-link text-decoration-none p-0 d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                {% if user.profile.avatar %}
+                                    <img src="{{ user.profile.avatar.url }}" class="user-avatar" alt="{{ user.username }}">
+                                {% else %}
+                                    <span class="user-avatar">{{ user.username|user_initials }}</span>
+                                {% endif %}
+                                <span class="d-none d-md-inline fw-semibold text-secondary small">{{ user.username }}</span>
+                                <i class="fa-solid fa-chevron-down text-muted" style="font-size: 0.7rem;"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border p-2">
+                                <li class="px-3 py-2 border-bottom mb-1">
+                                    <div class="fw-bold text-truncate">{{ user.username }}</div>
+                                    <div class="text-muted small text-truncate">{{ user.email|default:'Debater' }}</div>
+                                    <div class="mt-1">
+                                        <span class="badge {{ user.profile.rank_badge.class }} rounded-pill" style="font-size: 0.7rem;">
+                                            <i class="fa-solid {{ user.profile.rank_badge.icon }} me-1"></i>{{ user.profile.rank_badge.title }}
+                                        </span>
+                                    </div>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item rounded py-2 small" href="{% url 'user_profile' user.username %}">
+                                        <i class="fa-regular fa-user me-2 text-primary"></i> My Profile
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item rounded py-2 small" href="{% url 'profile_edit' user.username %}">
+                                        <i class="fa-solid fa-gear me-2 text-secondary"></i> Edit Profile
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item rounded py-2 small" href="{% url 'notifications_page' %}">
+                                        <i class="fa-regular fa-bell me-2 text-warning"></i> Notifications
+                                    </a>
+                                </li>
+                                <li class="border-top my-1"></li>
+                                <li>
+                                    <form method="post" action="{% url 'logout' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item rounded py-2 small text-danger">
+                                            <i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Log out
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="btn btn-outline-secondary btn-sm px-3">Log in</a>
+                        <a href="{% url 'signup' %}" class="btn btn-primary btn-sm px-3">Join Debate</a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </nav>
 
-    <main class="py-4">
+    <!-- Global Messages Banner -->
+    <div class="container mt-3">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show d-flex align-items-center gap-2 border shadow-sm" role="alert">
+                    <i class="fa-solid {% if message.tags == 'success' %}fa-circle-check text-success{% elif message.tags == 'error' or message.tags == 'danger' %}fa-circle-exclamation text-danger{% else %}fa-circle-info text-info{% endif %} fs-5"></i>
+                    <div class="flex-grow-1">{{ message }}</div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow-1 py-4">
         <div class="container">
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
             {% block content %}{% endblock %}
         </div>
     </main>
 
-    <footer class="footer mt-auto py-4 bg-dark text-white">
-        <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
-            <div>Debate Platform</div>
-            <div class="small text-white-50">Share ideas respectfully and keep the discussion moving.</div>
+    <!-- Global Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="row g-4 align-items-center">
+                <div class="col-md-6 text-center text-md-start">
+                    <div class="brand-logo mb-2 justify-content-center justify-content-md-start">
+                        <span class="brand-icon" style="width: 30px; height: 30px; font-size: 0.85rem;">
+                            <i class="fa-solid fa-scale-balanced"></i>
+                        </span>
+                        <span>Debate<span class="text-primary">Sphere</span></span>
+                    </div>
+                    <p class="small text-muted mb-0">Empowering intellectual curiosity through structured, civil, and evidence-driven discourse.</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <div class="d-flex justify-content-center justify-content-md-end gap-3 small mb-2">
+                        <a href="{% url 'topic_list' %}" class="text-muted">Explore</a>
+                        <a href="{% url 'leaderboard' %}" class="text-muted">Leaderboard</a>
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'user_profile' user.username %}" class="text-muted">Profile</a>
+                        {% else %}
+                            <a href="{% url 'signup' %}" class="text-muted">Sign Up</a>
+                        {% endif %}
+                    </div>
+                    <div class="small text-muted">© 2026 DebateSphere. Build perspectives, bridge divides.</div>
+                </div>
+            </div>
         </div>
     </footer>
 
+    <!-- Bootstrap 5 Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom Application JS -->
+    <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
